@@ -30,6 +30,11 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Api\AppSettingController as ApiAppSettingController;
+use App\Http\Controllers\Admin\AppSettingController as AdminAppSettingController;
+use App\Http\Controllers\Admin\BannerController as AdminBannerController;
+use App\Http\Controllers\Admin\AdminProfileController;
+use App\Http\Controllers\Admin\DeliveryZoneController;
 
 Route::get('/support-info', [SupportController::class, 'info']);
 Route::get('/health', [HealthController::class, 'index']);
@@ -146,11 +151,13 @@ Route::prefix('v1')->group(function () {
 
     // Mock endpoints for Flutter startup
     Route::get('/config', function () {
+        $currencySymbol = \App\Models\AppSetting::where('key', 'currency_symbol')->value('value') ?? 'ل.س';
+
         return response()->json([
             'status' => true,
             'business_name' => 'Demo E-commerce',
             'logo_full_url' => 'https://placehold.co/100x100?text=Logo',
-            'currency_symbol' => '$',
+            'currency_symbol' => $currencySymbol,
             'country' => 'US',
             'cash_on_delivery' => true,
             'digital_payment' => true,
@@ -416,8 +423,45 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::delete('categories/{id}', [AdminCategoryController::class, 'destroy']);
 
     Route::get('orders', [AdminOrderController::class, 'index']);
+    Route::get('orders/stats', [AdminOrderController::class, 'stats']);
     Route::patch('orders/{id}', [AdminOrderController::class, 'update']);
     Route::patch('orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
     Route::patch('orders/{id}/payment', [AdminOrderController::class, 'updatePayment']);
+    Route::post('orders/{id}/send-whatsapp', [AdminOrderController::class, 'sendWhatsApp']);
+    Route::post('orders/{id}/whatsapp-sent', [AdminOrderController::class, 'markWhatsappSent']);
     Route::delete('orders/{id}', [AdminOrderController::class, 'destroy']);
+
+    // App Settings — Admin
+    Route::get('app-settings', [AdminAppSettingController::class, 'index']);
+    Route::post('app-settings/bulk', [AdminAppSettingController::class, 'bulkUpdate']);
+    Route::put('app-settings/{key}', [AdminAppSettingController::class, 'update']);
+
+    // Banners — Admin
+    Route::get('banners', [AdminBannerController::class, 'index']);
+    Route::post('banners', [AdminBannerController::class, 'store']);
+    Route::post('banners/{id}', [AdminBannerController::class, 'update']);
+    Route::delete('banners/{id}', [AdminBannerController::class, 'destroy']);
+    Route::patch('banners/{id}/toggle', [AdminBannerController::class, 'toggle']);
+
+    // Admin Profile
+    Route::put('change-password', [AdminProfileController::class, 'changePassword']);
+
+    // Delivery Zones — Admin
+    Route::get('delivery-zones', [DeliveryZoneController::class, 'index']);
+    Route::post('delivery-zones', [DeliveryZoneController::class, 'store']);
+    Route::put('delivery-zones/{id}', [DeliveryZoneController::class, 'update']);
+    Route::delete('delivery-zones/{id}', [DeliveryZoneController::class, 'destroy']);
+
+    // Pricing — Admin
+    Route::post('/pricing', [ApiAppSettingController::class, 'updatePricing']);
 });
+
+// App Settings — Public
+Route::prefix('app-settings')->group(function () {
+    Route::get('/', [ApiAppSettingController::class, 'index']);
+    Route::get('/{key}', [ApiAppSettingController::class, 'show']);
+});
+
+// ===== Pricing Routes =====
+// Public (mobile app)
+Route::get('/pricing', [ApiAppSettingController::class, 'pricing']);

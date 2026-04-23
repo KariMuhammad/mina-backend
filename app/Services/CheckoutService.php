@@ -3,11 +3,13 @@
 namespace App\Services;
 
 use App\Models\Address;
+use App\Models\AppSetting;
 use App\Models\Coupon;
 use App\Models\GuestCartItem;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\DeliveryZoneService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +24,17 @@ class CheckoutService
      */
     public function checkout(?User $user, ?string $guestId, array $data): Order
     {
+        $addressText = $this->resolveAddressText($user, $data);
+
+        if (! app(DeliveryZoneService::class)->isAddressAllowed($addressText)) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'التوصيل غير متاح في هذه المنطقة حاليًا',
+                ], 422)
+            );
+        }
+
         return DB::transaction(function () use ($user, $guestId, $data) {
             if ($user !== null) {
                 return $this->placeOrderForUser($user, $data);
@@ -269,10 +282,19 @@ class CheckoutService
     ): Order {
         $subtotal = $priced['subtotal'];
         $discountAmount = $this->computeDiscount($coupon, $subtotal);
-        $total = round($subtotal - $discountAmount, 2);
+        $deliveryPrice = (float) (AppSetting::where('key', 'delivery_price')->value('value') ?? 0);
+        $total = round($subtotal - $discountAmount + $deliveryPrice, 2);
 
         $paymentMethod = in_array($paymentMethod, ['cod', 'none'], true) ? $paymentMethod : 'cod';
         $paymentStatus = $paymentMethod === 'cod' ? 'unpaid' : 'pending';
+
+        // Resolve customer name / phone / address from user or guest data
+        $customerName    = $guestName  ?? $userId ? \App\Models\User::find($userId)?->name : null;
+        $customerPhone   = $guestPhone ?? $userId ? \App\Models\User::find($userId)?->phone : null;
+        $customerAddress = collect([
+            $shippingSnapshot['address_line_1'] ?? null,
+            $shippingSnapshot['city'] ?? null,
+        ])->filter()->implode(', ') ?: null;
 
         $order = Order::query()->create([
             'user_id' => $userId,
@@ -286,6 +308,11 @@ class CheckoutService
             'coupon_id' => $coupon?->id,
             'coupon_code' => $coupon?->code,
             'total_price' => $total,
+            'delivery_price' => $deliveryPrice,
+            'products_total' => $subtotal,
+            'customer_name' => $customerName,
+            'customer_phone' => $customerPhone,
+            'customer_address' => $customerAddress,
             'status' => 'Pending',
             'payment_status' => $paymentStatus,
             'payment_method' => $paymentMethod,
@@ -356,5 +383,44 @@ class CheckoutService
             'zip' => $address->zip,
             'country' => $address->country,
         ];
+    }
+
+    private function resolveAddressText(?User $user, array $data): string
+    {
+        $inline = $data['shipping_address'] ?? null;
+        if (is_array($inline) && $inline !== []) {
+            return collect([
+                $inline['address_line'] ?? $inline['address_line_1'] ?? null,
+                $inline['city'] ?? null,
+            ])->filter()->implode(', ');
+        }
+
+        $addressPk = $data['shipping_address_id'] ?? $data['address_id'] ?? null;
+        if ($addressPk !== null && $addressPk !== '') {
+            $address = Address::find((int) $addressPk);
+            if ($address) {
+                return collect([
+                    $address->address_line_1,
+                    $address->city,
+                ])->filter()->implode(', ');
+            }
+        }
+
+        if ($user !== null) {
+            $userAddress = Address::where('user_id', $user->id)->first();
+            if ($userAddress) {
+                return collect([
+                    $userAddress->address_line_1,
+                    $userAddress->city,
+                ])->filter()->implode(', ');
+            }
+        }
+
+        $guestParts = [
+            $data['shipping_address_line_1'] ?? null,
+            $data['shipping_city'] ?? null,
+        ];
+
+        return collect($guestParts)->filter()->implode(', ');
     }
 }

@@ -14,7 +14,7 @@ class DashboardController extends Controller
         return response()->json([
             'total_orders' => Order::count(),
             'total_revenue' => (float) Order::sum('total_price'),
-            'pending_orders' => Order::where('status', 'pending')->count(),
+            'pending_orders' => Order::where('status', 'Pending')->count(),
             'available_products' => Product::count(),
         ]);
     }

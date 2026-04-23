@@ -12,16 +12,20 @@ class AdminOrderUpdateService
 {
     /** Canonical status values (keyed by lowercase alias) */
     private const STATUS_MAP = [
-        'pending'    => 'Pending',
-        'new'        => 'Pending',
-        'processing' => 'Processing',
-        'processed'  => 'Processing',
-        'shipped'    => 'Processing',
-        'completed'  => 'Completed',
-        'delivered'  => 'Completed',
-        'done'       => 'Completed',
-        'cancelled'  => 'Cancelled',
-        'canceled'   => 'Cancelled',
+        'pending'           => 'Pending',
+        'new'               => 'Pending',
+        'placed'            => 'Pending',
+        'processing'        => 'Processing',
+        'processed'         => 'Processing',
+        'preparing'         => 'Preparing',
+        'shipped'           => 'Out_for_Delivery',
+        'delivering'        => 'Out_for_Delivery',
+        'out_for_delivery'  => 'Out_for_Delivery',
+        'completed'         => 'Completed',
+        'delivered'         => 'Completed',
+        'done'              => 'Completed',
+        'cancelled'         => 'Cancelled',
+        'canceled'          => 'Cancelled',
     ];
 
     /** Canonical payment_status values (keyed by lowercase alias) */

@@ -18,7 +18,7 @@ class UpdateOrderRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'in:Pending,pending,Processing,processing,processed,shipped,Completed,completed,delivered,done,Cancelled,cancelled,canceled,new',
+                'in:Pending,Processing,Preparing,Out_for_Delivery,Completed,Cancelled',
             ],
             'payment_status' => [
                 'sometimes',
@@ -50,7 +50,7 @@ class UpdateOrderRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'status.in'         => 'Status must be one of: Pending, Processing, Completed, Cancelled.',
+            'status.in'         => 'Status must be one of: Pending, Processing, Preparing, Out_for_Delivery, Completed, Cancelled.',
             'payment_status.in' => 'Payment status must be one of: unpaid, pending, paid.',
             'payment_method.in' => 'Payment method must be one of: cod, none, card, wallet, bank_transfer.',
         ];

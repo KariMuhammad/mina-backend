@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Services\DeliveryZoneService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -14,6 +15,15 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
+        $address = $request->input('address') ?? $request->user()->address ?? '';
+
+        if (! app(DeliveryZoneService::class)->isAddressAllowed($address)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'التوصيل غير متاح في هذه المنطقة حاليًا',
+            ], 422);
+        }
+
         $request->validate([
             'total_price' => 'required|numeric',
             'items' => 'required|array',
@@ -22,9 +32,12 @@ class OrderController extends Controller
             'items.*.price' => 'required|numeric',
         ]);
 
+        $deliveryPrice = (float) (\App\Models\AppSetting::where('key', 'delivery_price')->value('value') ?? 0);
+
         $order = $request->user()->orders()->create([
             'subtotal' => $request->total_price,
-            'total_price' => $request->total_price,
+            'total_price' => $request->total_price + $deliveryPrice,
+            'delivery_price' => $deliveryPrice,
             'status' => 'Pending',
             'payment_status' => 'unpaid',
             'payment_method' => 'cod',

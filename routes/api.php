@@ -39,6 +39,10 @@ use App\Http\Controllers\Admin\DeliveryZoneController;
 Route::get('/support-info', [SupportController::class, 'info']);
 Route::get('/health', [HealthController::class, 'index']);
 
+// Public routes — no auth required
+Route::get('/banners', [AdminBannerController::class, 'publicIndex']);
+Route::get('/app-settings', [AdminAppSettingController::class, 'publicIndex']);
+
 // الرابط بتاع تسجيل الدخول (مفتوح لأي حد)
 Route::post('/login-phone', [AuthController::class, 'loginWithPhone']);
 Route::post('/register', [AuthController::class, 'register']);
@@ -345,7 +349,6 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
 });
 
-Route::get('/banners', [BannerController::class, 'index']);
 Route::post('/banners', [BannerController::class, 'store']);
 Route::post('/banners/{id}', [BannerController::class, 'update']);
 
@@ -456,11 +459,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/pricing', [ApiAppSettingController::class, 'updatePricing']);
 });
 
-// App Settings — Public
-Route::prefix('app-settings')->group(function () {
-    Route::get('/', [ApiAppSettingController::class, 'index']);
-    Route::get('/{key}', [ApiAppSettingController::class, 'show']);
-});
+// App Settings — Public (show single by key)
+Route::get('/app-settings/{key}', [ApiAppSettingController::class, 'show']);
 
 // ===== Pricing Routes =====
 // Public (mobile app)

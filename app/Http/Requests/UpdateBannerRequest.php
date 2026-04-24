@@ -10,7 +10,7 @@ class UpdateBannerRequest extends FormRequest
         return [
             'title' => 'sometimes|string|max:255',
             'is_active' => 'boolean',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif,svg|max:20480',
         ];
     }
 }

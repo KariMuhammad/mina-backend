@@ -6,9 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class AppSettingController extends Controller
 {
+    public function publicIndex(): JsonResponse
+    {
+        $settings = Cache::remember('public_app_settings', 300, function () {
+            return AppSetting::all()->pluck('value', 'key');
+        });
+
+        return response()->json([
+            'success' => true,
+            'data'    => $settings,
+        ]);
+    }
+
     /**
      * GET /api/admin/app-settings — all settings with full data.
      */
@@ -39,6 +52,7 @@ class AppSettingController extends Controller
                 $updated[] = $setting;
             }
         }
+        Cache::forget('public_app_settings');
 
         return response()->json([
             'message'  => 'Settings updated successfully.',
@@ -62,6 +76,7 @@ class AppSettingController extends Controller
         ]);
 
         $setting->update(['value' => $request->input('value')]);
+        Cache::forget('public_app_settings');
 
         return response()->json([
             'message' => 'Setting updated successfully.',

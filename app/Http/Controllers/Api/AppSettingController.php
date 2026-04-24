@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class AppSettingController extends Controller
 {
@@ -91,6 +92,7 @@ class AppSettingController extends Controller
                 ['value' => $value]
             );
         }
+        Cache::forget('public_app_settings');
 
         return response()->json([
             'success' => true,

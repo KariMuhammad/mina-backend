@@ -13,7 +13,7 @@ class StoreProductRequest extends FormRequest
             'quantity' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
             'category_id' => 'required|exists:categories,id',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif,svg|max:20480',
         ];
     }
 }

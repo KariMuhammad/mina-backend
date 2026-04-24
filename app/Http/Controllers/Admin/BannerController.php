@@ -7,9 +7,24 @@ use App\Models\Banner;
 use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class BannerController extends Controller
 {
+    public function publicIndex(): JsonResponse
+    {
+        $banners = Cache::remember('public_banners', 300, function () {
+            return Banner::where('is_active', true)
+                ->orderBy('order', 'asc')
+                ->get();
+        });
+
+        return response()->json([
+            'success' => true,
+            'data'    => $banners,
+        ]);
+    }
+
     public function index(): JsonResponse
     {
         $banners = Banner::orderBy('order')->get();
@@ -23,7 +38,7 @@ class BannerController extends Controller
     public function store(Request $request, ImageService $imageService): JsonResponse
     {
         $request->validate([
-            'image'     => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'image'     => 'required|image|mimes:jpeg,jpg,png,webp,gif,svg|max:20480',
             'title'     => 'nullable|string|max:255',
             'link'      => 'nullable|string|max:255',
             'is_active' => 'nullable|boolean',
@@ -39,6 +54,7 @@ class BannerController extends Controller
         }
 
         $banner = Banner::create($data);
+        Cache::forget('public_banners');
 
         return response()->json([
             'success' => true,
@@ -52,7 +68,7 @@ class BannerController extends Controller
         $banner = Banner::findOrFail($id);
 
         $request->validate([
-            'image'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'image'     => 'nullable|image|mimes:jpeg,jpg,png,webp,gif,svg|max:20480',
             'title'     => 'nullable|string|max:255',
             'link'      => 'nullable|string|max:255',
             'is_active' => 'nullable|boolean',
@@ -74,6 +90,7 @@ class BannerController extends Controller
         }
 
         $banner->update($data);
+        Cache::forget('public_banners');
 
         return response()->json([
             'success' => true,
@@ -91,6 +108,7 @@ class BannerController extends Controller
         }
 
         $banner->delete();
+        Cache::forget('public_banners');
 
         return response()->json([
             'success' => true,
@@ -103,6 +121,7 @@ class BannerController extends Controller
         $banner = Banner::findOrFail($id);
         $banner->is_active = !$banner->is_active;
         $banner->save();
+        Cache::forget('public_banners');
 
         return response()->json([
             'success' => true,

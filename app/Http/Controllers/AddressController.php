@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Address;
+use App\Rules\ValidCityRule;
 use Illuminate\Http\Request;
 
 class AddressController extends Controller
@@ -19,7 +20,7 @@ class AddressController extends Controller
             'phone' => 'nullable|string|max:20',
             'address_line_1' => 'required|string|max:255',
             'address_line_2' => 'nullable|string|max:255',
-            'city' => 'required|string|max:100',
+            'city' => ['required', 'string', 'max:100', new ValidCityRule()],
             'zip' => 'required|string|max:20',
             'country' => 'nullable|string|max:100',
             'is_default' => 'nullable|boolean'

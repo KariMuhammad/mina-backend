@@ -35,6 +35,7 @@ use App\Http\Controllers\Admin\AppSettingController as AdminAppSettingController
 use App\Http\Controllers\Admin\BannerController as AdminBannerController;
 use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\DeliveryZoneController;
+use App\Http\Controllers\Api\DeliveryZoneController as ApiDeliveryZoneController;
 
 Route::get('/support-info', [SupportController::class, 'info']);
 Route::get('/health', [HealthController::class, 'index']);
@@ -42,6 +43,7 @@ Route::get('/health', [HealthController::class, 'index']);
 // Public routes — no auth required
 Route::get('/banners', [AdminBannerController::class, 'publicIndex']);
 Route::get('/app-settings', [AdminAppSettingController::class, 'publicIndex']);
+Route::get('/cities', [ApiDeliveryZoneController::class, 'getActiveCities']);
 
 // الرابط بتاع تسجيل الدخول (مفتوح لأي حد)
 Route::post('/login-phone', [AuthController::class, 'loginWithPhone']);

@@ -34,6 +34,7 @@ class Order extends Model
         'guest_email',
         'guest_phone',
         'address_id',
+        'delivery_zone_id',
         'subtotal',
         'discount_amount',
         'coupon_id',
@@ -71,6 +72,11 @@ class Order extends Model
     public function address(): BelongsTo
     {
         return $this->belongsTo(Address::class);
+    }
+
+    public function deliveryZone(): BelongsTo
+    {
+        return $this->belongsTo(DeliveryZone::class);
     }
 
     public function coupon(): BelongsTo

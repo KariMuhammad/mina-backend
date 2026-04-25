@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Address;
+use App\Rules\ValidCityRule;
 use App\Support\CustomerAddressFormatter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ class CustomerAddressController extends Controller
             'address_line' => ['required_without:address_line_1', 'nullable', 'string', 'max:255'],
             'address_line_1' => ['required_without:address_line', 'nullable', 'string', 'max:255'],
             'address_line_2' => ['nullable', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:100'],
+            'city' => ['required', 'string', 'max:100', new ValidCityRule()],
             'postal_code' => ['required_without:zip', 'nullable', 'string', 'max:20'],
             'zip' => ['required_without:postal_code', 'nullable', 'string', 'max:20'],
             'country' => ['required', 'string', 'max:100'],
@@ -68,7 +69,7 @@ class CustomerAddressController extends Controller
             'address_line' => ['sometimes', 'nullable', 'string', 'max:255'],
             'address_line_1' => ['sometimes', 'nullable', 'string', 'max:255'],
             'address_line_2' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'city' => ['sometimes', 'required', 'string', 'max:100'],
+            'city' => ['sometimes', 'required', 'string', 'max:100', new ValidCityRule()],
             'postal_code' => ['sometimes', 'nullable', 'string', 'max:20'],
             'zip' => ['sometimes', 'nullable', 'string', 'max:20'],
             'country' => ['sometimes', 'required', 'string', 'max:100'],

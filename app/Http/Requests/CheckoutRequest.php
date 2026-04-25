@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\ValidCityRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -35,7 +36,7 @@ class CheckoutRequest extends FormRequest
                 'guest_phone' => ['required', 'string', 'max:32'],
                 'shipping_address_line_1' => ['required', 'string', 'max:255'],
                 'shipping_address_line_2' => ['nullable', 'string', 'max:255'],
-                'shipping_city' => ['required', 'string', 'max:100'],
+                'shipping_city' => ['required', 'string', 'max:100', new ValidCityRule()],
                 'shipping_zip' => ['required', 'string', 'max:20'],
                 'shipping_country' => ['nullable', 'string', 'max:100'],
             ];

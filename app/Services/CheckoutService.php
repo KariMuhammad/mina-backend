@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Address;
 use App\Models\AppSetting;
 use App\Models\Coupon;
+use App\Models\DeliveryZone;
 use App\Models\GuestCartItem;
 use App\Models\Order;
 use App\Models\Product;
@@ -35,19 +36,21 @@ class CheckoutService
             );
         }
 
-        return DB::transaction(function () use ($user, $guestId, $data) {
+        $deliveryZone = $this->resolveDeliveryZone($user, $data);
+
+        return DB::transaction(function () use ($user, $guestId, $data, $deliveryZone) {
             if ($user !== null) {
-                return $this->placeOrderForUser($user, $data);
+                return $this->placeOrderForUser($user, $data, $deliveryZone);
             }
 
-            return $this->placeOrderForGuest((string) $guestId, $data);
+            return $this->placeOrderForGuest((string) $guestId, $data, $deliveryZone);
         });
     }
 
     /**
      * @param  array<string, mixed>  $data
      */
-    private function placeOrderForUser(User $user, array $data): Order
+    private function placeOrderForUser(User $user, array $data, ?DeliveryZone $deliveryZone): Order
     {
         $lines = $user->cartItems()->with('product')->orderBy('id')->get();
         $this->assertCartNotEmpty($lines->isEmpty());
@@ -68,6 +71,7 @@ class CheckoutService
             guestEmail: null,
             guestPhone: null,
             addressId: $addressId,
+            deliveryZoneId: $deliveryZone?->id,
             shippingSnapshot: $shippingSnapshot,
             priced: $priced,
             coupon: $coupon,
@@ -113,7 +117,7 @@ class CheckoutService
     /**
      * @param  array<string, mixed>  $data
      */
-    private function placeOrderForGuest(string $guestId, array $data): Order
+    private function placeOrderForGuest(string $guestId, array $data, ?DeliveryZone $deliveryZone): Order
     {
         $lines = GuestCartItem::query()
             ->where('guest_id', $guestId)
@@ -148,6 +152,7 @@ class CheckoutService
             guestEmail: $data['guest_email'],
             guestPhone: $data['guest_phone'],
             addressId: null,
+            deliveryZoneId: $deliveryZone?->id,
             shippingSnapshot: $shippingSnapshot,
             priced: $priced,
             coupon: $coupon,
@@ -273,6 +278,7 @@ class CheckoutService
         ?string $guestEmail,
         ?string $guestPhone,
         ?int $addressId,
+        ?int $deliveryZoneId,
         array $shippingSnapshot,
         array $priced,
         ?Coupon $coupon,
@@ -303,6 +309,7 @@ class CheckoutService
             'guest_email' => $guestEmail,
             'guest_phone' => $guestPhone,
             'address_id' => $addressId,
+            'delivery_zone_id' => $deliveryZoneId,
             'subtotal' => $subtotal,
             'discount_amount' => $discountAmount,
             'coupon_id' => $coupon?->id,
@@ -422,5 +429,49 @@ class CheckoutService
         ];
 
         return collect($guestParts)->filter()->implode(', ');
+    }
+
+    private function resolveDeliveryZone(?User $user, array $data): ?DeliveryZone
+    {
+        $city = null;
+
+        $inline = $data['shipping_address'] ?? null;
+        if (is_array($inline) && $inline !== []) {
+            $city = $inline['city'] ?? null;
+        }
+
+        if ($city === null) {
+            $addressPk = $data['shipping_address_id'] ?? $data['address_id'] ?? null;
+            if ($addressPk !== null && $addressPk !== '') {
+                $address = Address::find((int) $addressPk);
+                if ($address) {
+                    $city = $address->city;
+                }
+            }
+        }
+
+        if ($city === null && $user !== null) {
+            $userAddress = Address::where('user_id', $user->id)->first();
+            if ($userAddress) {
+                $city = $userAddress->city;
+            }
+        }
+
+        if ($city === null) {
+            $city = $data['shipping_city'] ?? null;
+        }
+
+        if ($city === null || trim($city) === '') {
+            return null;
+        }
+
+        $normalized = mb_strtolower(trim($city));
+
+        return DeliveryZone::where('is_active', true)
+            ->where(function ($query) use ($normalized) {
+                $query->whereRaw('LOWER(name) = ?', [$normalized])
+                      ->orWhereRaw('LOWER(english_name) = ?', [$normalized]);
+            })
+            ->first();
     }
 }

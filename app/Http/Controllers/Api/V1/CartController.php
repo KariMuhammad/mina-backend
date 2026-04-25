@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\CartItem;
 use App\Models\Coupon;
-use App\Models\DeliveryZone;
+use App\Models\AppSetting;
 use App\Models\GuestCartItem;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
@@ -67,7 +67,7 @@ class CartController extends Controller
 
         $subtotal = round($subtotal, 2);
 
-        $deliveryFee = (float) (DeliveryZone::where('is_active', true)->value('delivery_fee') ?? 0);
+        $deliveryFee = (float) (AppSetting::where('key', 'delivery_price')->value('value') ?? 0);
         $total = round($subtotal + $deliveryFee, 2);
 
         $coupons = Coupon::query()

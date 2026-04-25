@@ -19,8 +19,9 @@ class DeliveryZoneController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:delivery_zones,name',
-            'is_active' => 'boolean',
+            'name'         => 'required|string|max:100|unique:delivery_zones,name',
+            'english_name' => 'nullable|string|max:100',
+            'is_active'    => 'boolean',
         ]);
 
         $zone = DeliveryZone::create($validated);
@@ -33,8 +34,9 @@ class DeliveryZoneController extends Controller
         $zone = DeliveryZone::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:100|unique:delivery_zones,name,' . $id,
-            'is_active' => 'sometimes|boolean',
+            'name'         => 'sometimes|string|max:100|unique:delivery_zones,name,' . $id,
+            'english_name' => 'nullable|string|max:100',
+            'is_active'    => 'sometimes|boolean',
         ]);
 
         $zone->update($validated);

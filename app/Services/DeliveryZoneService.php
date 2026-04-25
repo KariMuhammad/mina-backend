@@ -8,16 +8,20 @@ class DeliveryZoneService
 {
     public function isAddressAllowed(string $address): bool
     {
-        $zones = DeliveryZone::active()->pluck('name');
+        if (empty(trim($address))) return false;
 
-        if ($zones->isEmpty()) {
-            return false;
-        }
+        $address = mb_strtolower($address);
 
-        $addressLower = mb_strtolower($address);
+        $zones = DeliveryZone::active()->get();
 
         foreach ($zones as $zone) {
-            if (str_contains($addressLower, mb_strtolower($zone))) {
+            // Check Arabic name
+            if (str_contains($address, mb_strtolower($zone->name))) {
+                return true;
+            }
+            // Check English name if provided
+            if ($zone->english_name &&
+                str_contains($address, mb_strtolower($zone->english_name))) {
                 return true;
             }
         }

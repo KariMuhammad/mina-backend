@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class DeliveryZone extends Model
 {
-    protected $fillable = ['name', 'is_active'];
+    protected $fillable = ['name', 'english_name', 'is_active'];
 
     protected function casts(): array
     {

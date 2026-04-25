@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Support\CustomerOrderFormatter;
 use Illuminate\Http\JsonResponse;
@@ -42,9 +43,14 @@ class CustomerOrderController extends Controller
             return response()->json(['message' => 'Access denied! This resource does not belong to you.'], 403);
         }
 
+        $deliveryFee = (float) (DeliveryZone::where('is_active', true)->value('delivery_fee') ?? 0);
+        $total = round((float) $order->subtotal + $deliveryFee - (float) $order->discount_amount, 2);
+
         return response()->json([
             'order' => CustomerOrderFormatter::order($order),
             'items' => CustomerOrderFormatter::items($order),
+            'delivery_fee' => $deliveryFee,
+            'total' => $total,
         ]);
     }
 }

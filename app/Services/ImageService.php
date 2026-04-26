@@ -40,7 +40,8 @@ class ImageService
 
     /**
      * Generate an absolute URL from a stored image path.
-     * If the path is a full Cloudinary URL (starts with http), return it as-is.
+     * If the path is a full Cloudinary URL (starts with http), inject transformations
+     * for auto format (WebP), auto quality compression, and max width 800px.
      * Old local paths (e.g. products/abc.jpg) are no longer served — return null.
      */
     public static function url(?string $path): ?string
@@ -50,7 +51,11 @@ class ImageService
         }
 
         if (str_starts_with($path, 'http')) {
-            return $path; // valid Cloudinary URL
+            return str_replace(
+                '/image/upload/',
+                '/image/upload/f_auto,q_auto,w_800/',
+                $path
+            );
         }
 
         return null; // old local path → return null, don't serve from storage

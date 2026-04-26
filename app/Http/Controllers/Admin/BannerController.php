@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
-use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class BannerController extends Controller
 {
@@ -35,7 +35,7 @@ class BannerController extends Controller
         ]);
     }
 
-    public function store(Request $request, ImageService $imageService): JsonResponse
+    public function store(Request $request): JsonResponse
     {
         $request->validate([
             'image'     => 'required|image|mimes:jpeg,jpg,png,webp,gif,svg|max:20480',
@@ -50,7 +50,8 @@ class BannerController extends Controller
         $data['order'] = $request->input('order', 0);
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $imageService->upload($request->file('image'), 'banners');
+            $path = Storage::disk('cloudinary')->putFile('banners', $request->file('image'));
+            $data['image_path'] = Storage::disk('cloudinary')->url($path);
         }
 
         $banner = Banner::create($data);
@@ -63,7 +64,7 @@ class BannerController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, int $id, ImageService $imageService): JsonResponse
+    public function update(Request $request, int $id): JsonResponse
     {
         $banner = Banner::findOrFail($id);
 
@@ -86,7 +87,10 @@ class BannerController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $imageService->replace($banner->image_path ?? null, $request->file('image'), 'banners');
+            $this->deleteImage($banner->image_path);
+
+            $path = Storage::disk('cloudinary')->putFile('banners', $request->file('image'));
+            $data['image_path'] = Storage::disk('cloudinary')->url($path);
         }
 
         $banner->update($data);
@@ -99,12 +103,12 @@ class BannerController extends Controller
         ]);
     }
 
-    public function destroy(int $id, ImageService $imageService): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
         $banner = Banner::findOrFail($id);
 
         if ($banner->image_path) {
-            $imageService->delete($banner->image_path);
+            $this->deleteImage($banner->image_path);
         }
 
         $banner->delete();
@@ -128,5 +132,42 @@ class BannerController extends Controller
             'message' => 'Banner status updated.',
             'data' => $banner,
         ]);
+    }
+
+    private function deleteImage(?string $path): void
+    {
+        if (empty($path)) {
+            return;
+        }
+
+        // Cloudinary URL — extract public_id and delete via cloudinary disk
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $publicId = $this->extractCloudinaryPublicId($path);
+            if ($publicId) {
+                Storage::disk('cloudinary')->delete($publicId);
+            }
+            return;
+        }
+
+        // Legacy local path — delete from public disk
+        Storage::disk('public')->delete($path);
+    }
+
+    private function extractCloudinaryPublicId(string $url): ?string
+    {
+        $parsed = parse_url($url);
+        $path = $parsed['path'] ?? '';
+
+        // Match /image/upload/{optional transformations}/v{version}/{public_id}.{ext}
+        if (preg_match('#/image/upload/(?:[^/]+/)*v\d+/(.+)#', $path, $matches)) {
+            return preg_replace('/\.[^.]+$/', '', $matches[1]);
+        }
+
+        // Fallback: match /image/upload/{public_id}.{ext} without version
+        if (preg_match('#/image/upload/(.+)#', $path, $matches)) {
+            return preg_replace('/\.[^.]+$/', '', $matches[1]);
+        }
+
+        return null;
     }
 }

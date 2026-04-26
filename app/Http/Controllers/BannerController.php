@@ -6,7 +6,7 @@ use App\Models\Banner;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreBannerRequest;
 use App\Http\Requests\UpdateBannerRequest;
-use App\Services\ImageService;
+use Illuminate\Support\Facades\Storage;
 
 class BannerController extends Controller
 {
@@ -27,20 +27,21 @@ class BannerController extends Controller
         return response()->json(['campaigns' => [], 'banners' => $banners]);
     }
 
-    public function store(StoreBannerRequest $request, ImageService $imageService)
+    public function store(StoreBannerRequest $request)
     {
         $data = $request->only(['title']);
         $data['is_active'] = $request->input('is_active', true);
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $imageService->upload($request->file('image'), 'banners');
+            $path = Storage::disk('cloudinary')->putFile('banners', $request->file('image'));
+            $data['image_path'] = Storage::disk('cloudinary')->url($path);
         }
 
         $banner = Banner::create($data);
         return response()->json(['message' => 'Banner created successfully.', 'banner' => $banner], 201);
     }
 
-    public function update(UpdateBannerRequest $request, $id, ImageService $imageService)
+    public function update(UpdateBannerRequest $request, $id)
     {
         $banner = Banner::findOrFail($id);
         $data = $request->only(['title']);
@@ -49,10 +50,46 @@ class BannerController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $imageService->replace($banner->image_path ?? null, $request->file('image'), 'banners');
+            $this->deleteImage($banner->image_path);
+
+            $path = Storage::disk('cloudinary')->putFile('banners', $request->file('image'));
+            $data['image_path'] = Storage::disk('cloudinary')->url($path);
         }
 
         $banner->update($data);
         return response()->json(['message' => 'Banner updated successfully.', 'banner' => $banner]);
+    }
+
+    private function deleteImage(?string $path): void
+    {
+        if (empty($path)) {
+            return;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $publicId = $this->extractCloudinaryPublicId($path);
+            if ($publicId) {
+                Storage::disk('cloudinary')->delete($publicId);
+            }
+            return;
+        }
+
+        Storage::disk('public')->delete($path);
+    }
+
+    private function extractCloudinaryPublicId(string $url): ?string
+    {
+        $parsed = parse_url($url);
+        $path = $parsed['path'] ?? '';
+
+        if (preg_match('#/image/upload/(?:[^/]+/)*v\d+/(.+)#', $path, $matches)) {
+            return preg_replace('/\.[^.]+$/', '', $matches[1]);
+        }
+
+        if (preg_match('#/image/upload/(.+)#', $path, $matches)) {
+            return preg_replace('/\.[^.]+$/', '', $matches[1]);
+        }
+
+        return null;
     }
 }

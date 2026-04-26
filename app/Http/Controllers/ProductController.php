@@ -6,7 +6,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
-use App\Services\ImageService;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -36,29 +36,66 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
-    public function store(StoreProductRequest $request, ImageService $imageService)
+    public function store(StoreProductRequest $request)
     {
         $data = $request->only(['name', 'price', 'description', 'category_id', 'quantity']);
         $data['quantity'] = $request->input('quantity', 0);
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $imageService->upload($request->file('image'), 'products');
+            $path = Storage::disk('cloudinary')->putFile('products', $request->file('image'));
+            $data['image_path'] = Storage::disk('cloudinary')->url($path);
         }
 
         $product = Product::create($data);
         return response()->json(['message' => 'Product created successfully.', 'product' => $product], 201);
     }
 
-    public function update(UpdateProductRequest $request, $id, ImageService $imageService)
+    public function update(UpdateProductRequest $request, $id)
     {
         $product = Product::findOrFail($id);
         $data = $request->only(['name', 'price', 'description', 'category_id', 'quantity']);
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $imageService->replace($product->image_path ?? null, $request->file('image'), 'products');
+            $this->deleteImage($product->image_path);
+
+            $path = Storage::disk('cloudinary')->putFile('products', $request->file('image'));
+            $data['image_path'] = Storage::disk('cloudinary')->url($path);
         }
 
         $product->update($data);
         return response()->json(['message' => 'Product updated successfully.', 'product' => $product]);
+    }
+
+    private function deleteImage(?string $path): void
+    {
+        if (empty($path)) {
+            return;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $publicId = $this->extractCloudinaryPublicId($path);
+            if ($publicId) {
+                Storage::disk('cloudinary')->delete($publicId);
+            }
+            return;
+        }
+
+        Storage::disk('public')->delete($path);
+    }
+
+    private function extractCloudinaryPublicId(string $url): ?string
+    {
+        $parsed = parse_url($url);
+        $path = $parsed['path'] ?? '';
+
+        if (preg_match('#/image/upload/(?:[^/]+/)*v\d+/(.+)#', $path, $matches)) {
+            return preg_replace('/\.[^.]+$/', '', $matches[1]);
+        }
+
+        if (preg_match('#/image/upload/(.+)#', $path, $matches)) {
+            return preg_replace('/\.[^.]+$/', '', $matches[1]);
+        }
+
+        return null;
     }
 }

@@ -39,29 +39,21 @@ class ImageService
     }
 
     /**
-     * Generate an absolute URL from a relative path (stored as e.g. products/abc.jpg on the public disk).
-     * Uses asset() so the host/port always match config('app.url') — required when the React app runs on
-     * another origin (e.g. Vite :5173) and APP_URL must be the Laravel server (e.g. http://127.0.0.1:8000).
+     * Generate an absolute URL from a stored image path.
+     * If the path is a full Cloudinary URL (starts with http), return it as-is.
+     * Old local paths (e.g. products/abc.jpg) are no longer served — return null.
      */
-    public function url(?string $path): ?string
+    public static function url(?string $path): ?string
     {
-        if (empty($path)) {
+        if (!$path) {
             return null;
         }
 
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
+        if (str_starts_with($path, 'http')) {
+            return $path; // valid Cloudinary URL
         }
 
-        $path = str_replace('\\', '/', $path);
-        $path = ltrim($path, '/');
-
-        // Already a public path segment
-        if (str_starts_with($path, 'storage/')) {
-            return asset($path);
-        }
-
-        return asset('storage/' . $path);
+        return null; // old local path → return null, don't serve from storage
     }
 
     /**

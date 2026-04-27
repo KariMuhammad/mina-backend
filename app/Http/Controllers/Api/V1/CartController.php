@@ -73,17 +73,21 @@ class CartController extends Controller
         $coupons = Coupon::query()
             ->where('is_active', true)
             ->where(function ($q): void {
-                $q->whereNull('valid_until')
-                    ->orWhereDate('valid_until', '>=', now()->toDateString());
+                $q->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($q): void {
+                $q->whereNull('max_uses')
+                    ->orWhereColumn('used_count', '<', 'max_uses');
             })
             ->orderBy('code')
-            ->get(['id', 'code', 'discount_percent', 'discount_amount', 'minimum_order', 'valid_until'])
+            ->get(['id', 'code', 'type', 'value', 'min_order', 'expires_at'])
             ->map(fn (Coupon $c) => [
                 'code' => $c->code,
-                'discount_percent' => (float) $c->discount_percent,
-                'discount_amount' => (float) $c->discount_amount,
-                'minimum_order' => (float) $c->minimum_order,
-                'valid_until' => $c->valid_until?->toDateString(),
+                'type' => $c->type,
+                'value' => (float) $c->value,
+                'min_order' => (float) $c->min_order,
+                'expires_at' => $c->expires_at?->format('Y-m-d'),
             ])
             ->values()
             ->all();

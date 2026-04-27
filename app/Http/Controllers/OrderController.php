@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Address;
 use App\Models\AppSetting;
 use App\Models\Coupon;
 use App\Models\DeliveryZone;
@@ -102,13 +103,29 @@ class OrderController extends Controller
         ]);
 
         // --- 3. Delivery fee & totals ---
-        $addressInput = $request->input('address') ?? '';
-        $normalizedAddress = mb_strtolower(trim($addressInput));
+        $addressId = $request->input('address_id');
+        $address = null;
+
+        if ($addressId) {
+            $address = Address::where('id', $addressId)
+                ->where('user_id', $user->id)
+                ->first();
+        }
+
+        // Fallback: if no address_id, try to resolve city from raw address string
+        if ($address) {
+            $cityInput = mb_strtolower(trim($address->city));
+            $customerAddress = $address->address_line_1 . '، ' . $address->city;
+        } else {
+            $rawAddress = $request->input('address') ?? '';
+            $cityInput = mb_strtolower(trim($rawAddress));
+            $customerAddress = $rawAddress;
+        }
 
         $deliveryZone = DeliveryZone::where('is_active', true)
-            ->where(function ($q) use ($normalizedAddress) {
-                $q->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedAddress])
-                  ->orWhereRaw('LOWER(TRIM(english_name)) = ?', [$normalizedAddress]);
+            ->where(function ($q) use ($cityInput) {
+                $q->whereRaw('LOWER(TRIM(name)) LIKE ?', ["%{$cityInput}%"])
+                  ->orWhereRaw('LOWER(TRIM(english_name)) LIKE ?', ["%{$cityInput}%"]);
             })
             ->first();
 
@@ -119,7 +136,7 @@ class OrderController extends Controller
             ], 422);
         }
 
-        $deliveryPrice = (float) $deliveryZone->price;
+        $deliveryPrice = (float) $deliveryZone->delivery_fee;
         $finalPrice = round($subtotal - $discountAmount + $deliveryPrice, 2);
 
         $paymentMethod = $request->input('payment_method', 'cod');
@@ -133,25 +150,27 @@ class OrderController extends Controller
         $order = DB::transaction(function () use (
             $user, $subtotal, $discountAmount, $deliveryPrice, $finalPrice,
             $coupon, $paymentMethod, $paymentStatus, $customerName, $customerPhone,
-            $rows, $request
+            $rows, $request, $address, $customerAddress, $deliveryZone
         ) {
             $order = Order::query()->create([
-                'user_id'         => $user->id,
-                'subtotal'        => $subtotal,
-                'discount_amount' => $discountAmount,
-                'final_price'     => $finalPrice,
-                'coupon_id'       => $coupon?->id,
-                'coupon_code'     => $coupon?->code,
-                'total_price'     => $finalPrice,
-                'delivery_price'  => $deliveryPrice,
-                'products_total'  => $subtotal,
-                'customer_name'   => $customerName,
-                'customer_phone'  => $customerPhone,
-                'customer_address' => $request->input('address', ''),
-                'status'          => 'Pending',
-                'payment_status'  => $paymentStatus,
-                'payment_method'  => $paymentMethod,
-                'notes'           => $request->input('order_note'),
+                'user_id'          => $user->id,
+                'address_id'       => $address?->id,
+                'delivery_zone_id' => $deliveryZone->id,
+                'subtotal'         => $subtotal,
+                'discount_amount'  => $discountAmount,
+                'final_price'      => $finalPrice,
+                'coupon_id'        => $coupon?->id,
+                'coupon_code'      => $coupon?->code,
+                'total_price'      => $finalPrice,
+                'delivery_price'   => $deliveryPrice,
+                'products_total'   => $subtotal,
+                'customer_name'    => $customerName,
+                'customer_phone'   => $customerPhone,
+                'customer_address' => $customerAddress,
+                'status'           => 'Pending',
+                'payment_status'   => $paymentStatus,
+                'payment_method'   => $paymentMethod,
+                'notes'            => $request->input('order_note'),
             ]);
 
             foreach ($rows as $row) {

@@ -43,6 +43,7 @@ class CustomerOrderFormatter
             'delivery_price'     => $deliveryPrice,
             'discount'           => (float) $order->discount_amount,
             'discount_amount'    => (float) $order->discount_amount,
+            'final_price'        => (float) ($order->final_price ?: $totalPrice),
             'total_price'        => $totalPrice,
             'coupon_code'        => $order->coupon_code,
             'status'             => $order->status,

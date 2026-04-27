@@ -68,7 +68,22 @@ class CartController extends Controller
         $subtotal = round($subtotal, 2);
 
         $deliveryFee = (float) (AppSetting::where('key', 'delivery_price')->value('value') ?? 0);
-        $total = round($subtotal + $deliveryFee, 2);
+
+        // Apply coupon if coupon_code query param provided
+        $discountAmount = 0.0;
+        $appliedCoupon = null;
+        $couponCode = $request->query('coupon_code');
+
+        if ($couponCode) {
+            $appliedCoupon = Coupon::where('code', strtoupper($couponCode))->first();
+            if ($appliedCoupon && $appliedCoupon->isValid($subtotal)) {
+                $discountAmount = $appliedCoupon->calculateDiscount($subtotal);
+            } else {
+                $appliedCoupon = null;
+            }
+        }
+
+        $total = round($subtotal - $discountAmount + $deliveryFee, 2);
 
         $coupons = Coupon::query()
             ->where('is_active', true)
@@ -96,7 +111,14 @@ class CartController extends Controller
             'items' => $items,
             'subtotal' => $subtotal,
             'delivery_fee' => $deliveryFee,
+            'discount_amount' => $discountAmount,
+            'final_price' => $total,
             'total' => $total,
+            'coupon' => $appliedCoupon ? [
+                'code' => $appliedCoupon->code,
+                'type' => $appliedCoupon->type,
+                'value' => (float) $appliedCoupon->value,
+            ] : null,
             'coupons' => $coupons,
         ]);
     }

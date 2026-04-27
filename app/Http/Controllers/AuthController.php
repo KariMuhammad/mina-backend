@@ -84,10 +84,21 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'phone' => 'required|string',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:6',
+            'name'                  => 'required|string|max:255',
+            'email'                 => 'required|email|unique:users,email',
+            'phone'                 => 'required|string|regex:/^[0-9]{10,15}$/|unique:users,phone',
+            'password'              => 'required|string|min:8|confirmed',
+        ], [
+            'name.required'         => 'الاسم مطلوب',
+            'email.required'        => 'البريد الإلكتروني مطلوب',
+            'email.email'           => 'صيغة البريد الإلكتروني غير صحيحة',
+            'email.unique'          => 'البريد الإلكتروني مستخدم بالفعل',
+            'phone.required'        => 'رقم الهاتف مطلوب',
+            'phone.regex'           => 'رقم الهاتف يجب أن يكون بين 10 و 15 رقماً',
+            'phone.unique'          => 'رقم الهاتف مستخدم بالفعل',
+            'password.required'     => 'كلمة المرور مطلوبة',
+            'password.min'          => 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+            'password.confirmed'    => 'تأكيد كلمة المرور غير متطابق',
         ]);
 
         $user = User::create([

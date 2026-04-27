@@ -291,6 +291,7 @@ class CheckoutService
             'delivery_zone_id' => $deliveryZoneId,
             'subtotal' => $subtotal,
             'discount_amount' => $discountAmount,
+            'final_price' => $total,
             'coupon_id' => $coupon?->id,
             'coupon_code' => $coupon?->code,
             'total_price' => $total,

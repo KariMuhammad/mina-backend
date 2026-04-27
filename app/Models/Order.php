@@ -37,6 +37,7 @@ class Order extends Model
         'delivery_zone_id',
         'subtotal',
         'discount_amount',
+        'final_price',
         'coupon_id',
         'coupon_code',
         'total_price',

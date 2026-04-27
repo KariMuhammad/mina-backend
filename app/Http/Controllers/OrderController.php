@@ -137,6 +137,7 @@ class OrderController extends Controller
         }
 
         $deliveryPrice = (float) $deliveryZone->delivery_fee;
+        $totalPrice = round($subtotal - $discountAmount, 2);
         $finalPrice = round($subtotal - $discountAmount + $deliveryPrice, 2);
 
         $paymentMethod = $request->input('payment_method', 'cod');
@@ -148,7 +149,7 @@ class OrderController extends Controller
 
         // --- 4. Create order with coupon fields ---
         $order = DB::transaction(function () use (
-            $user, $subtotal, $discountAmount, $deliveryPrice, $finalPrice,
+            $user, $subtotal, $discountAmount, $deliveryPrice, $totalPrice, $finalPrice,
             $coupon, $paymentMethod, $paymentStatus, $customerName, $customerPhone,
             $rows, $request, $address, $customerAddress, $deliveryZone
         ) {
@@ -161,7 +162,7 @@ class OrderController extends Controller
                 'final_price'      => $finalPrice,
                 'coupon_id'        => $coupon?->id,
                 'coupon_code'      => $coupon?->code,
-                'total_price'      => $finalPrice,
+                'total_price'      => $totalPrice,
                 'delivery_price'   => $deliveryPrice,
                 'products_total'   => $subtotal,
                 'customer_name'    => $customerName,

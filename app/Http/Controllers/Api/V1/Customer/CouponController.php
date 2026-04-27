@@ -9,6 +9,33 @@ use Illuminate\Http\Request;
 
 class CouponController extends Controller
 {
+    public function index(): JsonResponse
+    {
+        $coupons = Coupon::where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('max_uses')
+                      ->orWhereColumn('used_count', '<', 'max_uses');
+            })
+            ->get();
+
+        return response()->json([
+            'data' => $coupons->map(fn ($c) => [
+                'code'        => $c->code,
+                'type'        => $c->type,
+                'value'       => (float) $c->value,
+                'min_order'   => (float) $c->min_order,
+                'expires_at'  => $c->expires_at?->format('Y-m-d'),
+                'description' => $c->type === 'percent'
+                    ? "خصم {$c->value}% على الطلبات فوق {$c->min_order} ج"
+                    : "خصم {$c->value} ج على الطلبات فوق {$c->min_order} ج",
+            ]),
+        ]);
+    }
+
     public function apply(Request $request): JsonResponse
     {
         $request->validate([

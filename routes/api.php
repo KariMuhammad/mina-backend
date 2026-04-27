@@ -355,6 +355,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::delete('customer/account', [ProfileController::class, 'deleteAccount']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::post('customer/coupons/apply', [CustomerCouponController::class, 'apply']);
+    Route::get('customer/coupons', [CustomerCouponController::class, 'index']);
 });
 
 Route::post('/banners', [BannerController::class, 'store']);

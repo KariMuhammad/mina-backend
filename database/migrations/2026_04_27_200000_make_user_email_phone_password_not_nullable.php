@@ -15,17 +15,43 @@ return new class extends Migration
         DB::statement("UPDATE users SET password = '' WHERE password IS NULL");
 
         Schema::table('users', function (Blueprint $table) {
-            $table->string('email')->nullable(false)->unique()->change();
-            $table->string('phone')->nullable(false)->unique()->change();
+            $table->string('email')->nullable(false)->change();
+            $table->string('phone')->nullable(false)->change();
             $table->string('password')->nullable(false)->change();
         });
+
+        // Add unique indexes only if they don't already exist
+        if (!Schema::hasIndex('users', 'users_email_unique')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->unique('email');
+            });
+        }
+
+        if (!Schema::hasIndex('users', 'users_phone_unique')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->unique('phone');
+            });
+        }
     }
 
     public function down(): void
     {
+        // Drop unique indexes only if they exist
+        if (Schema::hasIndex('users', 'users_email_unique')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropUnique(['email']);
+            });
+        }
+
+        if (Schema::hasIndex('users', 'users_phone_unique')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropUnique(['phone']);
+            });
+        }
+
         Schema::table('users', function (Blueprint $table) {
-            $table->string('email')->nullable()->unique()->change();
-            $table->string('phone')->nullable()->unique()->change();
+            $table->string('email')->nullable()->change();
+            $table->string('phone')->nullable()->change();
             $table->string('password')->nullable()->change();
         });
     }

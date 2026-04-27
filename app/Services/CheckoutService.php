@@ -298,6 +298,15 @@ class CheckoutService
             $shippingSnapshot['city'] ?? null,
         ])->filter()->implode(', ') ?: null;
 
+        Log::info('ORDER_CREATE_DATA', [
+            'coupon_id' => $coupon?->id,
+            'discount_amount' => $discountAmount,
+            'final_price' => $total,
+            'coupon_code' => $coupon?->code,
+            'subtotal' => $subtotal,
+            'delivery_price' => $deliveryPrice,
+        ]);
+
         $order = Order::query()->create([
             'user_id' => $userId,
             'guest_id' => $guestId,

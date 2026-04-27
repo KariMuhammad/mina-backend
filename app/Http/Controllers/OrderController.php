@@ -94,14 +94,8 @@ class OrderController extends Controller
         // --- 3. Delivery fee & totals ---
         $address = $request->input('address') ?? $user->address ?? '';
 
-        if (! app(DeliveryZoneService::class)->isAddressAllowed($address)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'التوصيل غير متاح في هذه المنطقة حاليًا',
-            ], 422);
-        }
-
-        $deliveryPrice = (float) (AppSetting::where('key', 'delivery_price')->value('value') ?? 0);
+        $deliveryZone = app(DeliveryZoneService::class)->resolveZoneFromAddress($address);
+        $deliveryPrice = $deliveryZone ? (float) $deliveryZone->price : 25;
         $finalPrice = round($subtotal - $discountAmount + $deliveryPrice, 2);
 
         $paymentMethod = $request->input('payment_method', 'cod');

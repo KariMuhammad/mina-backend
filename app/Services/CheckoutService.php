@@ -220,9 +220,7 @@ class CheckoutService
             return null;
         }
 
-        $coupon = Coupon::query()
-            ->whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
-            ->first();
+        $coupon = Coupon::where('code', strtoupper($code))->first();
 
         if ($coupon === null) {
             throw ValidationException::withMessages([
@@ -230,21 +228,9 @@ class CheckoutService
             ]);
         }
 
-        if (!$coupon->is_active) {
+        if (!$coupon->isValid($subtotal)) {
             throw ValidationException::withMessages([
-                'coupon_code' => ['This coupon is no longer active.'],
-            ]);
-        }
-
-        if ($coupon->valid_until !== null && now()->isAfter($coupon->valid_until->clone()->endOfDay())) {
-            throw ValidationException::withMessages([
-                'coupon_code' => ['This coupon has expired.'],
-            ]);
-        }
-
-        if ((float) $coupon->minimum_order > 0 && $subtotal < (float) $coupon->minimum_order) {
-            throw ValidationException::withMessages([
-                'coupon_code' => ['Order subtotal does not meet the minimum for this coupon.'],
+                'coupon_code' => ['الكوبون غير صالح أو منتهي الصلاحية'],
             ]);
         }
 
@@ -257,14 +243,7 @@ class CheckoutService
             return 0.0;
         }
 
-        $discount = 0.0;
-        if ((float) $coupon->discount_percent > 0) {
-            $discount = round($subtotal * ((float) $coupon->discount_percent / 100), 2);
-        } elseif ((float) $coupon->discount_amount > 0) {
-            $discount = (float) $coupon->discount_amount;
-        }
-
-        return min($discount, $subtotal);
+        return $coupon->calculateDiscount($subtotal);
     }
 
     /**
@@ -349,6 +328,10 @@ class CheckoutService
             ]);
 
             $product->decrement('quantity', $qty);
+        }
+
+        if ($coupon !== null) {
+            $coupon->increment('used_count');
         }
 
         $clearCart();

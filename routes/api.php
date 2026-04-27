@@ -35,6 +35,8 @@ use App\Http\Controllers\Admin\AppSettingController as AdminAppSettingController
 use App\Http\Controllers\Admin\BannerController as AdminBannerController;
 use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\DeliveryZoneController;
+use App\Http\Controllers\Admin\CouponController as AdminCouponController;
+use App\Http\Controllers\Api\V1\Customer\CouponController as CustomerCouponController;
 use App\Http\Controllers\Api\DeliveryZoneController as ApiDeliveryZoneController;
 
 Route::get('/support-info', [SupportController::class, 'info']);
@@ -348,7 +350,11 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::delete('customer/addresses/{id}', [CustomerAddressController::class, 'destroy']);
     Route::get('customer/orders', [CustomerOrderController::class, 'index']);
     Route::get('customer/orders/{id}', [CustomerOrderController::class, 'show']);
+    Route::put('customer/profile', [ProfileController::class, 'update']);
+    Route::put('customer/password', [ProfileController::class, 'changePassword']);
+    Route::delete('customer/account', [ProfileController::class, 'deleteAccount']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::post('customer/coupons/apply', [CustomerCouponController::class, 'apply']);
 });
 
 Route::post('/banners', [BannerController::class, 'store']);
@@ -459,6 +465,12 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 
     // Pricing — Admin
     Route::post('/pricing', [ApiAppSettingController::class, 'updatePricing']);
+
+    // Coupons — Admin
+    Route::get('coupons', [AdminCouponController::class, 'index']);
+    Route::post('coupons', [AdminCouponController::class, 'store']);
+    Route::put('coupons/{id}', [AdminCouponController::class, 'update']);
+    Route::delete('coupons/{id}', [AdminCouponController::class, 'destroy']);
 });
 
 // App Settings — Public (show single by key)

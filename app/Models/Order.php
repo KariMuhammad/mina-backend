@@ -22,7 +22,7 @@ class Order extends Model
             self::STATUS_PROCESSING       => 'قيد المعالجة',
             self::STATUS_PREPARING        => 'جاري تجهيز الطلب',
             self::STATUS_OUT_FOR_DELIVERY => 'الطلب في الطريق',
-            self::STATUS_COMPLETED        => 'تم الطلب',
+            self::STATUS_COMPLETED        => 'تم التوصيل',
             self::STATUS_CANCELLED        => 'ملغي',
         ];
     }

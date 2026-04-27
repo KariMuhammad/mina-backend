@@ -29,6 +29,7 @@ class User extends Authenticatable
         'loyalty_points',
         'avatar',
         'avatar_path',
+        'avatar_url',
     ];
 
     /**
@@ -58,10 +59,18 @@ class User extends Authenticatable
 
     public function getAvatarUrlAttribute()
     {
-        if ($this->avatar_path) {
-            return app(\App\Services\ImageService::class)->url($this->avatar_path);
+        // If avatar_url column has a Cloudinary URL, return it with transformations
+        if ($this->attributes['avatar_url'] ?? null) {
+            return \App\Services\ImageService::url($this->attributes['avatar_url']);
         }
-        return $this->avatar; // Fallback to old URL/string
+
+        // Legacy: avatar_path was used before Cloudinary migration
+        if ($this->avatar_path) {
+            return \App\Services\ImageService::url($this->avatar_path);
+        }
+
+        // Legacy: avatar field fallback
+        return $this->avatar;
     }
 
     /**

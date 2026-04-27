@@ -106,9 +106,10 @@ class WhatsAppService
         $deliveryPrice = $order->delivery_price !== null
             ? (float) $order->delivery_price
             : (float) (AppSetting::get('delivery_price') ?? 0);
-        $totalPrice = ($order->total_price !== null && (float) $order->total_price > 0)
-            ? (float) $order->total_price
-            : ($productsTotal + $deliveryPrice - (float) $order->discount_amount);
+        $discountAmount = (float) ($order->discount_amount ?? 0);
+        $finalPrice = ($order->final_price !== null && (float) $order->final_price > 0)
+            ? (float) $order->final_price
+            : ($productsTotal - $discountAmount + $deliveryPrice);
 
         $customerName  = $order->customer_name  ?: ($order->user?->name  ?? $order->guest_name  ?? '—');
         $customerPhone = $order->customer_phone ?: ($order->user?->phone ?? $order->guest_phone ?? '—');
@@ -117,6 +118,17 @@ class WhatsAppService
                 ? collect([$order->shipping_address['address_line_1'] ?? null, $order->shipping_address['city'] ?? null])->filter()->implode(', ')
                 : '—'
         );
+
+        $discountLines = '';
+        $afterDiscountLine = '';
+        if ($discountAmount > 0) {
+            $couponCode = $order->coupon_code ?? '';
+            $totalPrice = ($order->total_price !== null && (float) $order->total_price > 0)
+                ? (float) $order->total_price
+                : ($productsTotal - $discountAmount);
+            $discountLines = "🏷️ *الخصم:* -{$this->formatPrice($discountAmount)} ({$couponCode})\n";
+            $afterDiscountLine = "� *السعر بعد الخصم:* {$this->formatPrice($totalPrice)}\n";
+        }
 
         $message = <<<TEXT
 🛒 *طلب جديد #{$order->id}*
@@ -129,8 +141,8 @@ class WhatsAppService
 {$items}
 
 💰 *إجمالي المنتجات:* {$this->formatPrice($productsTotal)}
-🚚 *رسوم التوصيل:* {$this->formatPrice($deliveryPrice)}
-✅ *الإجمالي الكلي:* {$this->formatPrice($totalPrice)}
+🚚 *سعر التوصيل:* {$this->formatPrice($deliveryPrice)}
+{$discountLines}{$afterDiscountLine}✅ *السعر الكلي:* {$this->formatPrice($finalPrice)}
 
 📋 *حالة الطلب:* {$statusAr}
 TEXT;

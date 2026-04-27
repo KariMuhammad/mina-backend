@@ -129,7 +129,7 @@ class CustomerOrderFormatter
             'discount_amount' => (float) $order->discount_amount,
             'coupon_code' => $order->coupon_code,
             'total_price' => (float) $order->total_price,
-            'final_price' => (float) ($order->final_price ?: $order->total_price),
+            'final_price' => (float) ($order->final_price ?: round((float) $order->total_price + (float) ($order->delivery_price ?? 0), 2)),
             'order_items_count' => (int) ($order->order_items_count ?? $order->orderItems()->count()),
             'created_at' => $order->created_at?->toIso8601String(),
         ];

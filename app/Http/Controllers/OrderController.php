@@ -136,7 +136,7 @@ class OrderController extends Controller
             ], 422);
         }
 
-        $deliveryPrice = (float) $deliveryZone->delivery_fee;
+        $deliveryPrice = (float) (AppSetting::get('delivery_price') ?? 0);
         $totalPrice = round($subtotal - $discountAmount, 2);
         $finalPrice = round($subtotal - $discountAmount + $deliveryPrice, 2);
 

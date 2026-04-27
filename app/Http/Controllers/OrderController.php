@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\AppSetting;
 use App\Models\Coupon;
+use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\Product;
-use App\Services\DeliveryZoneService;
 use App\Support\CustomerOrderFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -77,11 +77,21 @@ class OrderController extends Controller
                 })
                 ->first();
 
-            if ($coupon && $subtotal >= (float) $coupon->min_order) {
-                $discountAmount = $coupon->calculateDiscount($subtotal);
-            } else {
-                $coupon = null;
+            if (!$coupon) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'كود الخصم غير صالح أو منتهي الصلاحية',
+                ], 422);
             }
+
+            if ($subtotal < (float) $coupon->min_order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'الحد الأدنى للطلب لتفعيل هذا الكوبون هو ' . $coupon->min_order . ' ل.س',
+                ], 422);
+            }
+
+            $discountAmount = $coupon->calculateDiscount($subtotal);
         }
 
         Log::info('ORDER_PLACE_COUPON', [
@@ -92,10 +102,24 @@ class OrderController extends Controller
         ]);
 
         // --- 3. Delivery fee & totals ---
-        $address = $request->input('address') ?? $user->address ?? '';
+        $addressInput = $request->input('address') ?? '';
+        $normalizedAddress = mb_strtolower(trim($addressInput));
 
-        $deliveryZone = app(DeliveryZoneService::class)->resolveZoneFromAddress($address);
-        $deliveryPrice = $deliveryZone ? (float) $deliveryZone->price : 25;
+        $deliveryZone = DeliveryZone::where('is_active', true)
+            ->where(function ($q) use ($normalizedAddress) {
+                $q->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedAddress])
+                  ->orWhereRaw('LOWER(TRIM(english_name)) = ?', [$normalizedAddress]);
+            })
+            ->first();
+
+        if (!$deliveryZone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'التوصيل غير متاح في هذه المنطقة حاليًا',
+            ], 422);
+        }
+
+        $deliveryPrice = (float) $deliveryZone->price;
         $finalPrice = round($subtotal - $discountAmount + $deliveryPrice, 2);
 
         $paymentMethod = $request->input('payment_method', 'cod');

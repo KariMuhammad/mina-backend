@@ -217,22 +217,39 @@ class CheckoutService
     private function resolveCoupon(?string $code, float $subtotal): ?Coupon
     {
         if ($code === null || $code === '') {
+            Log::info('checkout.coupon', ['coupon_code' => null, 'status' => 'no_code_provided']);
             return null;
         }
 
-        $coupon = Coupon::where('code', strtoupper($code))->first();
+        Log::info('checkout.coupon', ['coupon_code' => $code, 'subtotal' => $subtotal]);
+
+        $coupon = Coupon::where('code', strtoupper($code))
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('max_uses')
+                      ->orWhereColumn('used_count', '<', 'max_uses');
+            })
+            ->first();
 
         if ($coupon === null) {
-            throw ValidationException::withMessages([
-                'coupon_code' => ['This coupon code is not valid.'],
-            ]);
-        }
-
-        if (!$coupon->isValid($subtotal)) {
+            Log::info('checkout.coupon', ['coupon_code' => $code, 'status' => 'not_found_or_invalid']);
             throw ValidationException::withMessages([
                 'coupon_code' => ['الكوبون غير صالح أو منتهي الصلاحية'],
             ]);
         }
+
+        if ($subtotal < (float) $coupon->min_order) {
+            Log::info('checkout.coupon', ['coupon_code' => $code, 'status' => 'min_order_not_met', 'subtotal' => $subtotal, 'min_order' => $coupon->min_order]);
+            throw ValidationException::withMessages([
+                'coupon_code' => ['الحد الأدنى للطلب هو ' . $coupon->min_order . ' جنيه'],
+            ]);
+        }
+
+        Log::info('checkout.coupon', ['coupon_code' => $code, 'status' => 'valid', 'coupon_id' => $coupon->id, 'type' => $coupon->type, 'value' => $coupon->value]);
 
         return $coupon;
     }
@@ -312,7 +329,12 @@ class CheckoutService
             'user_id' => $userId,
             'guest_id' => $guestId,
             'payment_method' => $paymentMethod,
+            'subtotal' => $subtotal,
+            'discount_amount' => $discountAmount,
+            'delivery_price' => $deliveryPrice,
             'final_price' => $total,
+            'coupon_id' => $coupon?->id,
+            'coupon_code' => $coupon?->code,
         ]);
 
         foreach ($priced['rows'] as $row) {

@@ -9,9 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Fill any null emails/phones with placeholder before making NOT NULL
-        DB::table('users')->whereNull('email')->update(['email' => 'user_' . DB::raw('id') . '@placeholder.com']);
-        DB::table('users')->whereNull('phone')->update(['phone' => '0000000000']);
+        // Backfill null values with safe defaults before applying NOT NULL
+        DB::statement("UPDATE users SET email = CONCAT('user_', id, '@placeholder.com') WHERE email IS NULL");
+        DB::statement("UPDATE users SET phone = '0000000000' WHERE phone IS NULL");
+        DB::statement("UPDATE users SET password = '' WHERE password IS NULL");
 
         Schema::table('users', function (Blueprint $table) {
             $table->string('email')->nullable(false)->unique()->change();

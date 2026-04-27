@@ -16,9 +16,14 @@ class CustomerCheckoutController extends Controller
         /** @var array<string, mixed> $validated */
         $validated = $request->validated();
 
+        // Explicitly ensure coupon_code is in validated data
+        // (nullable fields may be absent from $validated if client doesn't send them)
+        $validated['coupon_code'] = $validated['coupon_code'] ?? $request->input('coupon_code') ?? $request->query('coupon_code');
+
         Log::info('CHECKOUT_REQUEST', [
             'coupon_code_from_validated' => $validated['coupon_code'] ?? 'NOT_PRESENT',
             'coupon_code_from_request' => $request->input('coupon_code', 'NOT_PRESENT'),
+            'query_coupon' => $request->query('coupon_code', 'NOT_PRESENT'),
             'all_keys' => array_keys($validated),
         ]);
 

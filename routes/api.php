@@ -356,6 +356,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::post('customer/coupons/apply', [CustomerCouponController::class, 'apply']);
     Route::get('customer/coupons', [CustomerCouponController::class, 'index']);
+    Route::post('customer/order/place', [OrderController::class, 'store']);
 });
 
 Route::post('/banners', [BannerController::class, 'store']);

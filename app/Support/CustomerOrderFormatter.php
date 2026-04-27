@@ -12,7 +12,7 @@ class CustomerOrderFormatter
      */
     public static function order(Order $order): array
     {
-        $order->loadMissing(['user', 'address', 'orderItems.product']);
+        $order->loadMissing(['user', 'address', 'coupon', 'orderItems.product']);
 
         // Resolve customer name/phone with user fallback
         $customerName  = $order->customer_name  ?: ($order->user?->name  ?? $order->guest_name  ?? null);
@@ -45,7 +45,7 @@ class CustomerOrderFormatter
             'discount_amount'    => (float) $order->discount_amount,
             'final_price'        => (float) ($order->final_price ?: $totalPrice),
             'total_price'        => $totalPrice,
-            'coupon_code'        => $order->coupon_code,
+            'coupon_code'        => $order->coupon_code ?: $order->coupon?->code,
             'status'             => $order->status,
             'payment_method'     => $order->payment_method,
             'payment_status'     => $order->payment_status,
@@ -115,9 +115,12 @@ class CustomerOrderFormatter
             'status' => $order->status,
             'payment_status' => $order->payment_status,
             'payment_method' => $order->payment_method,
-            'final_price' => (float) $order->total_price,
             'subtotal' => (float) $order->subtotal,
             'discount' => (float) $order->discount_amount,
+            'discount_amount' => (float) $order->discount_amount,
+            'coupon_code' => $order->coupon_code,
+            'final_price' => (float) ($order->final_price ?: $order->total_price),
+            'total_price' => (float) $order->total_price,
             'order_items_count' => (int) ($order->order_items_count ?? $order->orderItems()->count()),
             'created_at' => $order->created_at?->toIso8601String(),
         ];

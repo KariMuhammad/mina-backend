@@ -14,7 +14,7 @@ class ProductController extends Controller
 {
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $data = $request->only(['name', 'price', 'description', 'category_id', 'quantity']);
+        $data = $request->only(['name', 'price', 'description', 'category_id', 'quantity', 'is_popular']);
         $data['quantity'] = $request->input('quantity', 0);
 
         if ($request->hasFile('image')) {
@@ -33,7 +33,7 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
-        $data = $request->only(['name', 'price', 'description', 'category_id', 'quantity']);
+        $data = $request->only(['name', 'price', 'description', 'category_id', 'quantity', 'is_popular']);
 
         if ($request->hasFile('image')) {
             $this->deleteImage($product->image_path);

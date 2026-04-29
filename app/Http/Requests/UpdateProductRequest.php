@@ -14,6 +14,7 @@ class UpdateProductRequest extends FormRequest
             'description' => 'nullable|string',
             'category_id' => 'sometimes|exists:categories,id',
             'image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif,svg|max:20480',
+            'is_popular' => 'boolean',
         ];
     }
 }

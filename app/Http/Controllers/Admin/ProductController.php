@@ -16,6 +16,7 @@ class ProductController extends Controller
     {
         $data = $request->only(['name', 'price', 'description', 'category_id', 'quantity', 'is_popular']);
         $data['quantity'] = $request->input('quantity', 0);
+        $data['is_popular'] = $request->boolean('is_popular');
 
         if ($request->hasFile('image')) {
             $path = Storage::disk('cloudinary')->putFile('products', $request->file('image'));
@@ -34,6 +35,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         $data = $request->only(['name', 'price', 'description', 'category_id', 'quantity', 'is_popular']);
+        $data['is_popular'] = $request->boolean('is_popular');
 
         if ($request->hasFile('image')) {
             $this->deleteImage($product->image_path);

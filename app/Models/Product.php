@@ -21,6 +21,10 @@ class Product extends Model
 
     protected $appends = ['image_url'];
 
+    protected $casts = [
+        'is_popular' => 'boolean',
+    ];
+
     public function getImageUrlAttribute()
     {
         if ($this->image_path) {
